@@ -5,7 +5,7 @@
 支持的操作：执行存储、SQL、动态语句拼接、表对表抽取、单条数据轮询、HTTP调用、调用WebService接口、调用JavaScript代码
 xml解析、json解析、xml、json解析后入库、调用shell脚本等，并且可在原基础上很方便的进行扩展
 
-新功能：支持BLOB字段数据抽取
+新功能：支持BLOB字段数据抽取、支持多线程任务
 执行通过调用rest服务来发起etl任务
 ```
 
