@@ -1,6 +1,6 @@
 # zpd-pyetl
 
-### Python 版 中普达ETL中间件
+### Python 版 ETL中间件
 
 #### QUICK START
 
