@@ -2,9 +2,10 @@
 
 以下说明已经可以通过一键安装脚本实现部署：zpd-pyetl.sh
 
-欢迎沟通交流：微信号：snoopy-lubin
-公众号：玩大数据的snoopy
-CSDN：https://blog.csdn.net/lubinsu?type=blog
+ 欢迎沟通交流：
+> * 微信号：snoopy-lubin
+> * 公众号：玩大数据的snoopy
+> * CSDN：https://blog.csdn.net/lubinsu?type=blog
 
 ### Python 版 ETL中间件
 
