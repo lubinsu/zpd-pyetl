@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- job数据库配置方式所在地址 -->
+<config>
+    <connection>
+        <!--链接名称，随意定义，最好是英文，或者与迁移的KETTLE一致-->
+        <name>ydhl</name>
+        <!--数据库名称-->
+        <db>etl_interface</db>
+        <!--数据库类型，目前支持 sqlserver、oracle、mysql-->
+        <dbType>mysql</dbType>
+        <!--数据库地址-->
+        <host>192.168.41.139</host>
+        <!--端口号-->
+        <port>3306</port>
+        <!--用户名-->
+        <user>root</user>
+        <!--密码-->
+        <password>TVRJek5EVTI=</password>
+    </connection>
+    <log.level>
+        <!--一般情况下，默认即可-->
+        <console_level>INFO</console_level>
+        <db_level>INFO</db_level>
+    </log.level>
+
+    <processes>
+        <count>8</count>
+    </processes>
+</config>
