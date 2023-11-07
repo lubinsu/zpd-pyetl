@@ -1,3 +1,15 @@
+当前版本已支持的ETL功能如下：
+
+```
+支持数据库：Mysql、Oracle、Postgre、sqlserver、iris
+
+支持的操作：执行存储、SQL、动态语句拼接、表对表抽取、单条数据轮询、HTTP调用、调用WebService接口、调用JavaScript代码
+xml解析、json解析、xml、json解析后入库、调用shell脚本等，并且可在原基础上很方便的进行扩展
+
+新功能：支持BLOB字段数据抽取
+执行通过调用rest服务来发起etl任务
+```
+
 # zpd-pyetl
 
 以下说明已经可以通过一键安装脚本实现部署：zpd-pyetl.sh
