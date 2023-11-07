@@ -1,4 +1,3 @@
-当前版本已支持的ETL功能如下：
 
 ```
 支持数据库：Mysql、Oracle、Postgre、sqlserver、iris
