@@ -1,5 +1,7 @@
 # zpd-pyetl
 
+以下说明已经可以通过一键安装脚本实现部署：zpd-pyetl.sh
+
 ### Python 版 ETL中间件
 
 #### QUICK START
