@@ -3,15 +3,15 @@ source ~/.bash_profile
 
 #函数定义
 function restart_serv(){
-    cnt=`ps -ef | grep "python3 rest.py" | grep -v grep | wc -l`
+    cnt=`ps -ef | grep "python36 rest.py" | grep -v grep | wc -l`
     if [ $cnt -gt 0 ]
     then
       echo "ETL服务异常，正在重启"
-      ps -ef | grep "python3 rest.py" | grep -v grep | awk '{print $2}' | xargs kill
-      nohup python3 rest.py >> $ZPD_PYETL_HOME/log/py_rest.log 2>&1 &
+      ps -ef | grep "python36 rest.py" | grep -v grep | awk '{print $2}' | xargs kill
+      nohup python36 rest.py >> $ZPD_PYETL_HOME/log/py_rest.log 2>&1 &
       echo "重启成功"
     else
-      nohup python3 rest.py >> $ZPD_PYETL_HOME/log/py_rest.log 2>&1 &
+      nohup python36 rest.py >> $ZPD_PYETL_HOME/log/py_rest.log 2>&1 &
       echo "服务不存在，重启成功"
     fi
 }
@@ -39,7 +39,7 @@ else
       echo "链接超时，ETL服务重启完毕"
     fi
   else
-    cnt=`ps -ef | grep "python3 rest.py" | grep -v grep | wc -l`
+    cnt=`ps -ef | grep "python36 rest.py" | grep -v grep | wc -l`
     restart_serv
   fi
 fi
