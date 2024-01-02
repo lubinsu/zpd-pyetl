@@ -196,6 +196,11 @@ def get_jobs_by_db(db, job_chain):
                 if type_ == "sql":
                     tos.append(Job.To(conName, target, type_))
 
+                elif type_ == "dy_function":
+                    # 来源变量
+                    source_field = to_item["from_sql"]
+                    tos.append(Job.To(conName, target, type_, source_field=source_field))
+
                 elif type_ == "shell":
                     tos.append(Job.To(None, target, type_, source_field=from_sql))
 
