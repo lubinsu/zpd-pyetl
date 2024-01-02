@@ -10,6 +10,7 @@ import execjs
 import traceback
 from pymysql.converters import escape_string
 from flask import session
+from plugins import *
 
 import pandas as pd
 import petl as etl
@@ -254,16 +255,24 @@ class Job:
             target_db = self.target[0].conName
 
             self.msgLog("开始调用存储过程: {}.{}".format(target_db, targetProc), steptime)
-            connection = databases[target_db].getConnection()
-            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            if databases[target_db].type_ == "oracle":
+                # 获取参数清单
+                databases[target_db].getConnection().cursor().execute(
+                    "ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+                databases[target_db].getConnection().cursor().execute(targetProc)
+                # databases[target_db].getConnection().cursor().callproc(targetProc)  # ['Nick', 'Nick, Good Morning!']
+                # steptime = self.msgLog("调用存储过程: {}，完成".format(targetProc), steptime, level="DEBUG")
+            else:
+                connection = databases[target_db].getConnection()
+                cursor = connection.cursor(pymysql.cursors.DictCursor)
 
-            with connection.cursor() as cursor:
-                try:
-                    cursor.execute(targetProc)
-                    connection.commit()
-                except Exception as err:
-                    logging.error(err)
-                    connection.rollback()
+                with connection.cursor() as cursor:
+                    try:
+                        cursor.execute(targetProc)
+                        connection.commit()
+                    except Exception as err:
+                        logging.error(err)
+                        connection.rollback()
 
             steptime = self.msgLog("调用存储过程完成: {}.{}".format(target_db, targetProc), steptime)
         elif self.jobType == "shell":
@@ -347,6 +356,13 @@ class Job:
                         for var in target.params:
                             res = docjs.eval(var.name)
                             row[var.name] = res
+
+                    # 动态调用自定义函数，用于非结构化数据处理。
+                    # 配置字段：py_transform.from_sql，以及 py_transform.to_target
+                    elif target.type_ == "dy_function":
+                        func_name = row[target.target.format(**row)]
+                        text = row[target.source_field]
+                        return eval("{0}".format(func_name))(text)
 
                     elif target.type_ == "http":
                         # 执行http

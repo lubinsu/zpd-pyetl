@@ -195,6 +195,10 @@ def get_jobs_by_db(db, job_chain):
                 type_ = to_item["transType"]
                 if type_ == "sql":
                     tos.append(Job.To(conName, target, type_))
+
+                elif type_ == "shell":
+                    tos.append(Job.To(None, target, type_, source_field=from_sql))
+
                 elif type_ in ['jsonParser', 'xmlParser']:
 
                     # 来源变量
