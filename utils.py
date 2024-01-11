@@ -183,6 +183,11 @@ def get_jobs_by_db(db, job_chain):
             procName = item["source_sql"]
 
             jobs[name] = Job(name, jobType, "", "", [Job.To(conName, procName)], is_fail_continue=is_fail_continue)
+        elif jobType == "shell":
+            conName = item["from_db"]
+            shellName = item["source_sql"]
+
+            jobs[name] = Job(name, jobType, "", "", [Job.To(conName, shellName)], is_fail_continue=is_fail_continue)
         elif jobType == "stream":
             tos = []
             from_con_name = item["from_db"]
