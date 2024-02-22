@@ -416,6 +416,9 @@ class Job:
                         # 执行jsonParser解析JSON
                         target_field = target.target.format(**row)
                         self.msgLog("开始调用JSON解析器: {}".format(row[target.source_field]), steptime, level="DEBUG")
+                        #json解析字符串增加根节点root
+                        row["{}_unescape".format(target.source_field)] = '{{"root":{}}}'.format(row["{}_unescape".format(target.source_field)])
+                        row[target.source_field] = '{{"root":{}}}'.format(row[target.source_field])
 
                         if "{}_unescape".format(target.source_field) in row:
                             json_obj_o_ = json.loads(row["{}_unescape".format(target.source_field)])
