@@ -84,7 +84,8 @@ class Database:
             return self.conn
         elif self.type_ == "sqlserver":
             if self.conn is None:
-                self.conn = pymssql.connect(server=self.host, user=self.user, password=self.password, database=self.db)
+                self.conn = pymssql.connect(host=self.host, user=self.user, port=int(self.port), password=self.password,
+                                            database=self.db)
             return self.conn
         elif self.type_ == "postgre":
             if self.conn is None:
