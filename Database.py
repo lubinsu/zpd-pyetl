@@ -83,7 +83,12 @@ class Database:
                         raise
             return self.conn
         elif self.type_ == "sqlserver":
-            if self.conn is None:
+
+            # 部分存在密码为空的情况，无需输入密码
+            if self.conn is None and (self.password is None or self.password == ''):
+                self.conn = pymssql.connect(host=self.host, user=self.user, port=int(self.port),
+                                            database=self.db)
+            elif self.conn is None:
                 self.conn = pymssql.connect(host=self.host, user=self.user, port=int(self.port), password=self.password,
                                             database=self.db)
             return self.conn
