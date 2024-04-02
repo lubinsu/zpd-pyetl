@@ -401,16 +401,26 @@ def xml_element_to_dict(elem):
 # )
 # if connect:
 #     print("连接成功!")
-if __name__ == '__main__':
-    connection1 = pymysql.connect(password="123456", database="etl_interface", user="root", host="192.168.41.139",
-                                  port=3306)
-
-    select_sql = "SELECT * FROM `py_connections`"
-    mysqlCursor = connection1.cursor()
-    mysqlCursor.execute(select_sql)
-
-    for row in mysqlCursor:
-        print(row)
+import threading
+import time
 
 
+def task(n):
+    print(f"Task {n} is running")
+    time.sleep(2)
+    print(f"Task {n} is done")
 
+
+def main():
+    threads = []
+    for i in range(5):  # 假设我们要执行5个任务
+        t = threading.Thread(target=task, args=(i,))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()  # 等待所有线程完成
+
+
+if __name__ == "__main__":
+    print(datetime.datetime.strptime("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))

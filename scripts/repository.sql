@@ -468,4 +468,20 @@ INSERT INTO `py_jobtype` (`id`, `jobType`) VALUES (6, 'syn_blob');
 -- tag:zpd-pyetl-4.1.4 增加支持可插拔的插件调用能力，具备动态调用自定义函数，用于非结构化数据处理。
 INSERT INTO `py_trans_type` (`id`, `trans_type_name`, `trans_type_comment`) VALUES (12, 'dy_function', '调用动态函数');
 
+-- tag:zpd-pyetl-5.0.0 增加支持crontab定时任务
+CREATE TABLE `py_crontabs`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键，无意义',
+  `cron` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'crontab语法定时任务配置',
+  `jobs_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT 'shell脚本、Job名称(多个用逗号隔开)',
+  `state` enum('Y','N') CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT 'Y' COMMENT '状态：默认可用：Y，不可用：N',
+  `cron_type` enum('shell','pyjobs') CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '任务类型：shell或者是py_jobs表中配置的任务',
+  `comments` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '备注',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of py_crontabs
+-- ----------------------------
+INSERT INTO `py_crontabs` VALUES (1, '* * * * *', 'timeout 300s sh /soft/etl/zpd_pyetl_files/slave_check.sh', 'Y', 'shell', '备库监控脚本');
+INSERT INTO `py_crontabs` VALUES (2, '*/2 * * * *', 'log_write_back,log_syn', 'Y', 'pyjobs', '快速任务');
 SET FOREIGN_KEY_CHECKS = 1;
