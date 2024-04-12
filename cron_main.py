@@ -4,43 +4,17 @@
 # @desc : 定时调度扫描
 
 import sys
-import main
-from datetime import *
 from xml.dom.minidom import parse
 
-from CronTab import CronTab
+from crons.CronTab import CronTab
+from crons.cron_task import *
 from rest import log_config_db
-from zpd_logging.handler.logger_handler_to_mysql import LoggerHandlerToMysql
-import requests
+
 import threading
-import subprocess
 
 import croniter
 
 from utils import *
-
-
-def CronRunCurrentTime(sched):
-    cron = croniter.croniter(sched, datetime.datetime.now() + datetime.timedelta(minutes=-1))
-    return cron.get_next(datetime.datetime).strftime("%Y-%m-%d %H:%M")
-
-
-def task(cron):
-    logging.info("crontab任务开始：{}".format(cron.jobs_name))
-    try:
-        if cron.cron_type == "shell":
-            # os.system(cron.jobs_name)
-            subprocess.run(cron.jobs_name, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        elif cron.cron_type == "pyjobs":
-            url = 'http://127.0.0.1:8383/runjob/{}'.format(cron.jobs_name)
-            requests.get(url)
-            # if v_rst.status_code == 200:
-            #     print(v_rst.text)
-            # else:
-            #     print('Failed to retrieve data, status code:', v_rst.status_code)
-        logging.info("crontab任务结束：{}".format(cron.jobs_name))
-    except Exception as e:
-        logging.error("{}执行异常, {}".format(cron.jobs_name, traceback.format_exc()))
 
 
 if __name__ == '__main__':
@@ -60,6 +34,7 @@ if __name__ == '__main__':
     threads = []
 
     try:
+        now = datetime.datetime.now()
         for item in etl.dicts(cron_list):
 
             cron = CronTab(item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'])
@@ -67,8 +42,7 @@ if __name__ == '__main__':
             # 验证cron表达式
             if croniter.croniter.is_valid(cron.cron):
 
-                now = datetime.datetime.now()
-                nearest = CronRunCurrentTime(cron.cron)
+                nearest = CronRunCurrentTime(now, cron.cron)
                 now_str = now.strftime("%Y-%m-%d %H:%M")
                 # print("当前时间", now_str)
                 # print("最近的时间", nearest)

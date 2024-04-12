@@ -401,26 +401,37 @@ def xml_element_to_dict(elem):
 # )
 # if connect:
 #     print("连接成功!")
-import threading
-import time
+# import threading
+# import time
+#
+#
+# def task(n):
+#     print(f"Task {n} is running")
+#     time.sleep(2)
+#     print(f"Task {n} is done")
+#
+#
+# def main():
+#     threads = []
+#     for i in range(5):  # 假设我们要执行5个任务
+#         t = threading.Thread(target=task, args=(i,))
+#         threads.append(t)
+#         t.start()
+#
+#     for t in threads:
+#         t.join()  # 等待所有线程完成
 
-
-def task(n):
-    print(f"Task {n} is running")
-    time.sleep(2)
-    print(f"Task {n} is done")
-
-
-def main():
-    threads = []
-    for i in range(5):  # 假设我们要执行5个任务
-        t = threading.Thread(target=task, args=(i,))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()  # 等待所有线程完成
+def get_result():
+    db = Database("name", "test", "mysql", "192.168.41.139", "3306", "root", encode("123456"))
+    sql = "select '1' as errCode"
+    cur = db.getConnection().cursor()
+    if db.type_ == "oracle":
+        row_count = cur.execute(sql)
+    else:
+        row_count = cur.execute(sql)
+    result = cur.fetchone()
+    print(result)
 
 
 if __name__ == "__main__":
-    print(datetime.datetime.strptime("2024-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
+    get_result()

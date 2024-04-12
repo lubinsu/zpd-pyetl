@@ -6,19 +6,19 @@
 # 状态校验: curl --connect-timeout 5 -m 5 "http://127.0.0.1:8383/check_rest_status/"
 # 流程调用: curl --connect-timeout 5 "http://127.0.0.1:8383/runjob/invoke_proc,log_write_back"
 
-import os
-import sys
-import traceback
 from gevent import monkey
 from gevent.pywsgi import WSGIServer
-from flask import Flask, jsonify
+import sys
 
 monkey.patch_all()
+
+from crons.cron_task import *
+from crons.CronTab import CronTab
+import threading
 
 from logging.handlers import RotatingFileHandler
 from xml.dom.minidom import parse
 from datetime import *
-from datetime import timedelta
 import time
 
 from multiprocessing import cpu_count, Process
@@ -74,15 +74,7 @@ def log_config_db(db, log_levels):
     logger = logging.getLogger()
     logger.setLevel("DEBUG")
     logger.addHandler(handler)
-    #
-    # chlr = logging.StreamHandler(sys.stdout)
-    # handler.setLevel(logging.INFO)
 
-    # 创建一个格式器formatter并将其添加到处理器handler
-    # formatter2 = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    # chlr.setFormatter(formatter2)
-
-    # 为日志器logger添加上面创建的处理器handler
     logger.addHandler(console)
 
 
@@ -99,6 +91,68 @@ def check_rest_status():
     lock.release()
 
     return status_code
+
+
+@app.route('/run_cron/')
+def run_cron():
+    # 读取配置
+    db_dom = parse("{}/resources/db.xml".format(sys.path[0]))
+    db_document = db_dom.documentElement
+
+    lock.acquire()
+    db = get_db_config(db_document)
+    # log_levels = get_log_level(db_document)
+    # log_config_db(db, log_levels)
+    lock.release()
+
+    cron_list = etl.fromdb(db.getConnection(),
+                           "SELECT A.CRON, A.JOBS_NAME, A.CRON_TYPE"
+                           " FROM py_crontabs A "
+                           " WHERE STATE = 'Y'")
+
+    logging.info("异步执行crontab任务开始")
+    threads = []
+
+    try:
+        now = datetime.datetime.now()
+        for item in etl.dicts(cron_list):
+
+            try:
+
+                cron = CronTab(item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'])
+
+                # 验证cron表达式
+                if croniter.croniter.is_valid(cron.cron):
+
+                    now = datetime.datetime.now()
+                    nearest = CronRunCurrentTime(now, cron.cron)
+                    now_str = now.strftime("%Y-%m-%d %H:%M")
+                    # print("当前时间", now_str)
+                    # print("最近的时间", nearest)
+
+                    # 如果满足执行要求，则开始执行
+                    if now_str == nearest:
+                        t = threading.Thread(target=task, args=(cron,))
+                        # print("提交完成：", datetime.datetime.now())
+                        threads.append(t)
+                        # t.start()
+                else:
+                    # 验证cron表达式
+                    logging.error("cron表达式校验异常：{}".format(cron.cron))
+            except Exception as e:
+                logging.error(traceback.format_exc())
+        for t in threads:
+            t.start()
+
+        for t in threads:
+            t.join()  # 等待所有线程完成
+
+        logging.info("异步执行crontab任务结束")
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        return "异步执行异常"
+
+    return "异步执行结束"
 
 
 @app.route('/runjob/<all_jobs>')
@@ -163,7 +217,7 @@ def run_job(all_jobs):
 
         logging.info("任务结束：{}".format(job_chain))
         exit_val = 0
-        return "任务结束：{}".format(job_chain)
+        # return "任务结束：{}".format(job_chain)
 
     except cx_Oracle.DatabaseError as e:
         logging.error("数据库异常: {}".format(e))
@@ -187,10 +241,11 @@ def run_job(all_jobs):
             databases[key].close()
         if db_meta is not None:
             db_meta.close()
-        exit(exit_val)
+        # exit(exit_val)
+        return "任务结束：{}".format(job_chain)
+
 
 def run(MULTI_PROCESS, proc_count=1):
-
     if not MULTI_PROCESS:
         WSGIServer(('0.0.0.0', 8383), app).serve_forever()
     else:

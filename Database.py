@@ -72,13 +72,15 @@ class Database:
             if self.conn is None:
                 try:
                     self.conn = pymysql.connect(password=self.password, database=self.db, user=self.user, host=self.host,
-                                                port=int(self.port), client_flag=CLIENT.MULTI_STATEMENTS)
+                                                port=int(self.port), client_flag=CLIENT.MULTI_STATEMENTS
+                                                , autocommit=True)
                 except:
                     if self.back_host is not None:
                         logging.warning("主库连接异常，已切换为备库")
                         self.conn = pymysql.connect(password=self.password, database=self.db, user=self.user,
                                                     host=self.back_host,
-                                                    port=int(self.port), client_flag=CLIENT.MULTI_STATEMENTS)
+                                                    port=int(self.port), client_flag=CLIENT.MULTI_STATEMENTS
+                                                    , autocommit=True)
                     else:
                         raise
             return self.conn
