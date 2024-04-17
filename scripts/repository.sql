@@ -484,4 +484,12 @@ CREATE TABLE `py_crontabs`  (
 -- ----------------------------
 INSERT INTO `py_crontabs` VALUES (1, '* * * * *', 'timeout 300s sh /soft/etl/zpd_pyetl_files/slave_check.sh', 'Y', 'shell', '备库监控脚本');
 INSERT INTO `py_crontabs` VALUES (2, '*/2 * * * *', 'log_write_back,log_syn', 'Y', 'pyjobs', '快速任务');
+
+-- tag:zpd-pyetl-5.0.2 增加支持crontab定时任务
+alter table py_crontabs add
+(
+  `is_concurrency` enum('Y','N') NOT NULL DEFAULT 'N' COMMENT '是否并发',
+  `modify_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
