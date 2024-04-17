@@ -5,8 +5,10 @@
 
 class CronTab:
 
-    def __init__(self, cron, jobs_name, cron_type):
+    def __init__(self, id, cron, jobs_name, cron_type, is_concurrency="N"):
 
+        self.id = id
         self.cron = cron
         self.jobs_name = jobs_name
         self.cron_type = cron_type
+        self.is_concurrency = is_concurrency

@@ -26,7 +26,7 @@ if __name__ == '__main__':
     log_config_db(db, log_levels)
 
     cron_list = etl.fromdb(db.getConnection(),
-                           "SELECT A.CRON, A.JOBS_NAME, A.CRON_TYPE"
+                           "SELECT A.ID, A.IS_CONCURRENCY, A.CRON, A.JOBS_NAME, A.CRON_TYPE"
                            " FROM py_crontabs A "
                            " WHERE STATE = 'Y'")
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         now = datetime.datetime.now()
         for item in etl.dicts(cron_list):
 
-            cron = CronTab(item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'])
+            cron = CronTab(item['ID'], item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'], item['IS_CONCURRENCY'])
 
             # 验证cron表达式
             if croniter.croniter.is_valid(cron.cron):

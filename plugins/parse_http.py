@@ -4,6 +4,7 @@ import re
 # @param text 文本
 # @return True：是，False：不是
 def check_string(text):
+
     return True if isinstance(text, str) else False
 
 

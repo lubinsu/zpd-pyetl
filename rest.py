@@ -106,7 +106,7 @@ def run_cron():
     lock.release()
 
     cron_list = etl.fromdb(db.getConnection(),
-                           "SELECT A.CRON, A.JOBS_NAME, A.CRON_TYPE"
+                           "SELECT A.ID, A.IS_CONCURRENCY, A.CRON, A.JOBS_NAME, A.CRON_TYPE"
                            " FROM py_crontabs A "
                            " WHERE STATE = 'Y'")
 
@@ -119,7 +119,7 @@ def run_cron():
 
             try:
 
-                cron = CronTab(item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'])
+                cron = CronTab(item['ID'], item['CRON'], item['JOBS_NAME'], item['CRON_TYPE'], item['IS_CONCURRENCY'])
 
                 # 验证cron表达式
                 if croniter.croniter.is_valid(cron.cron):
