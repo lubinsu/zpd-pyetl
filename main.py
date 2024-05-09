@@ -2,8 +2,8 @@
 # @Author : lubinsu
 # @File : main.py
 # @desc : 主程序，添加任务
-# 动态参数测试测试用例：python3 main.py sys_dynamic-config-template.xml p_truncate_quick_tbs,动态参数测试
-# 数据库配置方式调用示例：python3 main.py db 数据同步测试_PostgreSQL
+# 动态参数测试测试用例：python36 main.py sys_dynamic-config-template.xml p_truncate_quick_tbs,动态参数测试
+# 数据库配置方式调用示例：python36 main.py db 数据同步测试_PostgreSQL
 
 import os
 import sys
@@ -131,6 +131,7 @@ if __name__ == '__main__':
                     except pymssql.DatabaseError as e:
                         logging.error("数据库异常: {}".format(e))
                     except KeyError as e:
+                        logging.error(traceback.format_exc())
                         logging.error("未匹配到字段: {}".format(e))
                     except Exception as e:
                         logging.error(traceback.format_exc())

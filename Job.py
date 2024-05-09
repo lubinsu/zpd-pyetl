@@ -223,29 +223,67 @@ class Job:
             # 获取动态参数
             for row in etl.dicts(paramsTable):
                 for transform in self.transforms:
-                    sourceDb = transform.source.conName
-                    sourceSql = transform.source.sql
-                    table = etl.fromdb(databases[sourceDb].getConnection(), sourceSql.format(**row))
+                    # print(transform.jobType)
+                    if transform.jobType == 'transform':
+                        sourceDb = transform.source.conName
+                        sourceSql = transform.source.sql
+                        table = etl.fromdb(databases[sourceDb].getConnection(), sourceSql.format(**row))
 
-                    self.msgLog("开始同步数据: {}".format(sourceSql.format(**row)), steptime, level="DEBUG")
-                    targetTable = transform.target[0].target
-                    target_db = transform.target[0].conName
+                        self.msgLog("开始同步数据: {}".format(sourceSql.format(**row)), steptime, level="DEBUG")
+                        targetTable = transform.target[0].target
+                        target_db = transform.target[0].conName
 
-                    if databases[target_db].type_ == "oracle":
-                        connection2 = databases[target_db].getCursor()
-                    else:
-                        connection2 = databases[target_db].getConnection()
+                        if databases[target_db].type_ == "oracle":
+                            connection2 = databases[target_db].getCursor()
+                        else:
+                            connection2 = databases[target_db].getConnection()
 
-                    if databases[target_db].type_ == "mysql":
-                        logging.debug("执行Job任务：{}, {}".format(self.jobType, "mysql连接需要设置SQL_MODE"))
-                        connection2.cursor().execute('SET SQL_MODE=ANSI_QUOTES')
+                        if databases[target_db].type_ == "mysql":
+                            logging.debug("执行Job任务：{}, {}".format(self.jobType, "mysql连接需要设置SQL_MODE"))
+                            connection2.cursor().execute('SET SQL_MODE=ANSI_QUOTES')
 
-                    dcount = len(etl.head(table, 1))
-                    if dcount >= 2:
-                        logging.debug("执行Job任务：{}, {}".format(self.jobType, "数据存在，执行插入语句"))
-                        etl.appenddb(table=table, dbo=connection2, tablename=targetTable.format(**row))
+                        dcount = len(etl.head(table, 1))
+                        if dcount >= 2:
+                            logging.debug("执行Job任务：{}, {}".format(self.jobType, "数据存在，执行插入语句"))
+                            etl.appenddb(table=table, dbo=connection2, tablename=targetTable.format(**row))
 
-                    steptime = self.msgLog("数据同步完成，目标表: {}".format(targetTable.format(**row)), steptime, level="DEBUG")
+                        steptime = self.msgLog("数据同步完成，目标表: {}".format(targetTable.format(**row)), steptime, level="DEBUG")
+                    elif transform.jobType == "sql":
+                        # 20220608 添加对null的转义
+                        # print(row)
+                        target_sql = transform.target[0].target
+                        target_db = transform.target[0].conName
+                        sql = target_sql.format(**row).replace("'None'", "null").replace("None", "null")
+                        # print(sql)
+                        try:
+                            if databases[target_db].type_ == "oracle":
+                                row_count = databases[target_db].getCursor().execute(sql)
+                            else:
+                                row_count = databases[target_db].getConnection().cursor().execute(sql)
+                            row["_status"] = '2'
+                            row["_errmsg"] = '执行成功:更新条数为：{}'.format(str(row_count))
+                        except (Exception) as e1:
+                            ex1 = "timed out"
+                            ex2 = "Deadlock"
+                            # ex3 = "Duplicate"
+                            if ex1 in str(e1) or ex2 in str(e1):
+                                try:
+                                    if databases[target_db].type_ == "oracle":
+                                        row_count = databases[target_db].getCursor().execute(sql)
+                                    else:
+                                        row_count = databases[target_db].getConnection().cursor().execute(sql)
+                                    row["_status"] = '1'
+                                    row["_errmsg"] = '重试成功:更新条数为：{}'.format(str(row_count))
+                                    logging.warning("重试成功，执行的SQL：{}".format(sql))
+                                except Exception as e:
+                                    row["_status"] = '2'
+                                    row["_errmsg"] = escape_string(repr(e))
+                                    logging.error("SQL重试失败：{}，执行的SQL：{}".format(traceback.format_exc(), sql))
+                            else:
+                                row["_status"] = '2'
+                                row["_errmsg"] = escape_string(repr(e1))
+                                logging.error("SQL执行失败：{}，执行的SQL：{}".format(traceback.format_exc(), sql))
+
                 i = i + 1
 
             steptime = self.msgLog("数据同步完成.", steptime)
@@ -307,6 +345,7 @@ class Job:
                 for target in self.target:
                     if target.type_ == "sql":
                         # 20220608 添加对null的转义
+                        # print(row)
                         sql = target.target.format(**row).replace("'None'", "null").replace("None", "null")
                         # print(sql)
                         try:
@@ -361,8 +400,8 @@ class Job:
                     # 配置字段：py_transform.from_sql，以及 py_transform.to_target
                     elif target.type_ == "dy_function":
                         func_name = row[target.target.format(**row)]
-                        text = row[target.source_field]
-                        return eval("{0}".format(func_name))(text)
+                        rst = eval("{0}".format(func_name))(row)
+                        row = row if rst is None else rst
 
                     elif target.type_ == "http":
                         # 执行http
@@ -376,6 +415,10 @@ class Job:
 
                         if len(headers) == 0 and 'headers' in row:
                             headers = json.loads(row['headers'])
+                        if 'application/x-www-form-urlencoded' in headers["Content-Type"]:
+                            data =json.loads(row['body'])
+                        else:
+                            data =row['body'].encode(row['encode'])
 
                         if 'body' not in row:
                             row['body'] = '{}'
@@ -387,7 +430,7 @@ class Job:
                             r = requests.get(url=url)
                         else:
                             r = requests.post(url=url,
-                                              data=row['body'].encode(row['encode']),
+                                              data=data,
                                               headers=headers)
 
                         row[target.target.format(**row)] = escape_string(repr(r.text))
