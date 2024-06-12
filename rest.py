@@ -150,8 +150,12 @@ def run_cron():
         logging.info("异步执行crontab任务结束")
     except Exception as e:
         logging.error(traceback.format_exc())
+        if db is not None:
+            db.close()
         return "异步执行异常"
-
+    finally:
+        if db is not None:
+            db.close()
     return "异步执行结束"
 
 

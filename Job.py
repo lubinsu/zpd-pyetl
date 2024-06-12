@@ -39,7 +39,7 @@ class Param:
     def __init__(self, name, in_out, param_type):
         self.name = name
         self.in_out = in_out
-        self.param_type = param_type# 参数类
+        self.param_type = param_type # 参数类
 
 
 class BlobSeq:
@@ -138,7 +138,7 @@ class Job:
             self.msgLog("开始同步数据: {}".format(sourceSQL), steptime, level="DEBUG")
             sourceConnection = databases[sourceDb].getConnection()
 
-            if databases[target_db].type_ == "oracle":
+            if databases[target_db].type_ in ["oracle", "db2"]:
                 connection2 = databases[target_db].getCursor()
             else:
                 connection2 = databases[target_db].getConnection()
@@ -181,7 +181,7 @@ class Job:
             logging.debug("获取数据库连接完成：{}".format(sourceDb))
 
             if databases[target_db].type_ == "mysql":
-                if databases[sourceDb].type_ == "oracle":
+                if databases[sourceDb].type_ in ["oracle", "db2"]:
                     o_cursor = sourceConnection.cursor()
 
                 o_cursor.execute(sourceSQL)
@@ -233,7 +233,7 @@ class Job:
                         targetTable = transform.target[0].target
                         target_db = transform.target[0].conName
 
-                        if databases[target_db].type_ == "oracle":
+                        if databases[target_db].type_ in ["oracle", "db2"]:
                             connection2 = databases[target_db].getCursor()
                         else:
                             connection2 = databases[target_db].getConnection()
@@ -256,7 +256,7 @@ class Job:
                         sql = target_sql.format(**row).replace("'None'", "null").replace("None", "null")
                         # print(sql)
                         try:
-                            if databases[target_db].type_ == "oracle":
+                            if databases[target_db].type_ in ["oracle", "db2"]:
                                 row_count = databases[target_db].getCursor().execute(sql)
                             else:
                                 row_count = databases[target_db].getConnection().cursor().execute(sql)
@@ -268,7 +268,7 @@ class Job:
                             # ex3 = "Duplicate"
                             if ex1 in str(e1) or ex2 in str(e1):
                                 try:
-                                    if databases[target_db].type_ == "oracle":
+                                    if databases[target_db].type_ in ["oracle", "db2"]:
                                         row_count = databases[target_db].getCursor().execute(sql)
                                     else:
                                         row_count = databases[target_db].getConnection().cursor().execute(sql)

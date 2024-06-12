@@ -204,7 +204,6 @@ INSERT INTO `py_trans_type` (`id`, `trans_type_name`) VALUES (7, 'xmlParser');
 INSERT INTO `py_trans_type` (`id`, `trans_type_name`) VALUES (8, 'jsonParser');
 INSERT INTO `py_trans_type` (`id`, `trans_type_name`) VALUES (9, 'http');
 INSERT INTO `py_trans_type` (`id`, `trans_type_name`) VALUES (10, 'list_2_table');
-INSERT INTO `py_trans_type` (`id`, `trans_type_name`) VALUES (11, 'shell');
 
 
 -- ----------------------------
@@ -491,5 +490,20 @@ alter table py_crontabs add
   `is_concurrency` enum('Y','N') NOT NULL DEFAULT 'N' COMMENT '是否并发',
   `modify_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- tag:zpd-pyetl-5.0.3 视图方便查询正在同步的数据
+CREATE OR REPLACE VIEW `v_py_jobs_syn_view`
+AS
+SELECT `a`.`id` AS `id`, `a`.`state` AS `state`, `a`.`name` AS `name`, `a`.`source_sql` AS `source_sql`, `a`.`comments` AS `comments`
+	, `b`.`to_target` AS `目标表`, `c`.`db` AS `db`, `c`.`db_type_id` AS `db_type_id`, `c`.`host` AS `host`, `c`.`port` AS `port`
+	, `c`.`user` AS `user`, `c`.`password` AS `password`
+FROM `py_jobs` `a`
+	JOIN `py_transforms` `b` ON `a`.`id` = `b`.`job_id`
+	JOIN `py_connections` `c` ON `a`.`source_conn_id` = `c`.`id`
+WHERE `a`.`job_type_id` = 1
+	AND `a`.`state` = 'Y';
+
+-- tag:zpd-pyetl-5.0.4 增加支持db2
+INSERT INTO py_dbtype(id, dbType) VALUES ('5', 'db2');
 
 SET FOREIGN_KEY_CHECKS = 1;
