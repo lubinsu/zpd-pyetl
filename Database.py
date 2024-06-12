@@ -149,6 +149,13 @@ class Database:
                     'postgresql+psycopg2://{}:{}@{}:{}/{}'.format(self.user, self.password, self.host, self.port,
                                                                   self.db))
             return self.engine
+
+        elif self.type_ == "db2":
+            if self.engine is None:
+                self.engine = create_engine(
+                    "db2:///?Server={}&Port={}&User={}&Password={}&Database={}"
+                    .format(self.host, self.port, self.user, self.password, self.db))
+            return self.engine
         else:
             return None
 
