@@ -1,7 +1,9 @@
+import ibm_db_dbi
 import pymysql
 import psycopg2
 import cx_Oracle
 import pymssql
+import ibm_db
 # import iris
 from pymysql.constants import CLIENT
 from sqlalchemy import create_engine
@@ -94,6 +96,24 @@ class Database:
                 self.conn = pymssql.connect(host=self.host, user=self.user, port=int(self.port), password=self.password,
                                             database=self.db)
             return self.conn
+        elif self.type_ == "db2":
+
+            # 部分存在密码为空的情况，无需输入密码
+            if self.conn is None:
+                dsn = (
+                    "DRIVER={{IBM DB2 ODBC DRIVER}};"
+                    "DATABASE={0};"
+                    "HOSTNAME={1};"
+                    "AUTHENTICATION=SERVER;"
+                    "PORT={2};"
+                    "PROTOCOL=TCPIP;"
+                    "UID={3};"
+                    "PWD={4};").format(self.db, self.host, int(self.port), self.user, self.password)
+
+                ibm_db_conn = ibm_db.connect(dsn, "", "")
+                self.conn = ibm_db_dbi.Connection(ibm_db_conn)
+
+            return self.conn
         elif self.type_ == "postgre":
             if self.conn is None:
                 self.conn = psycopg2.connect(database=self.db, user=self.user, password=self.password, host=self.host,
@@ -133,9 +153,11 @@ class Database:
             return None
 
     def getCursor(self):
-        if self.cursor is None:
+        if self.cursor is None and self.type_ == "oracle":
             self.cursor = CursorProxy(cx_Oracle.Connection(
                 "{}/{}@{}:{}/{}".format(self.user, self.password, self.host, int(self.port), self.db)).cursor())
+        elif self.cursor is None and self.type_ == "db2":
+            self.cursor = self.conn.cursor()
         return self.cursor
 
     def close(self):
