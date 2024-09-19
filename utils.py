@@ -113,7 +113,7 @@ def get_jobs_by_db(db, job_chain):
         is_fail_continue = item["is_fail_continue"]
 
         logging.debug("获取每个job详细步骤")
-        sql2 = "SELECT tr.job_id, tr.id trans_id, tr.`name`, tt.trans_type_name transType, conn2.name AS trans_from_db, tr.from_sql, conn3.name AS trans_to_db, tr.to_target, tr.order " \
+        sql2 = "SELECT tr.job_id, tr.id trans_id, tr.`name`, tt.trans_type_name transType, conn2.name AS trans_from_db, tr.from_sql, conn3.name AS trans_to_db, tr.to_target, tr.order, tr.exception_patterns, tr.delay, tr.retries " \
                "FROM py_transforms tr " \
                "	LEFT JOIN py_connections conn2 ON tr.from_conn_id = conn2.id " \
                "	LEFT JOIN py_connections conn3 ON tr.to_conn_id = conn3.id " \
@@ -198,8 +198,11 @@ def get_jobs_by_db(db, job_chain):
                 conName = to_item["trans_to_db"]
                 target = to_item["to_target"]
                 type_ = to_item["transType"]
+                exception_patterns = to_item["exception_patterns"]
+                retries = to_item["retries"]
+                delay = to_item["delay"]
                 if type_ == "sql":
-                    tos.append(Job.To(conName, target, type_))
+                    tos.append(Job.To(conName, target, type_, exception_patterns=exception_patterns, retries=retries, delay=delay))
 
                 elif type_ == "dy_function":
                     # 来源变量
@@ -268,7 +271,7 @@ def get_jobs_by_db(db, job_chain):
 
                     # 来源变量
                     source_field = to_item["from_sql"]
-                    tos.append(Job.To(conName, target, type_, headers, source_field=source_field))
+                    tos.append(Job.To(conName, target, type_, headers, source_field=source_field, exception_patterns=exception_patterns, retries=retries))
                 elif type_ == "procedure":
 
                     sql = "SELECT " \

@@ -506,4 +506,10 @@ WHERE `a`.`job_type_id` = 1
 -- tag:zpd-pyetl-5.0.4 增加支持db2
 INSERT INTO py_dbtype(id, dbType) VALUES ('5', 'db2');
 
+ALTER TABLE py_transforms ADD(
+	exception_patterns varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'timed out|Deadlock' COMMENT '报错重试匹配串：timed out|Deadlock',
+	retries int NOT NULL DEFAULT '0' COMMENT '最大重试次数',
+	delay int NOT NULL DEFAULT '0' COMMENT '重试延迟时间，单位：秒'
+);
+
 SET FOREIGN_KEY_CHECKS = 1;

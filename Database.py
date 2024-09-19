@@ -1,9 +1,11 @@
-import ibm_db_dbi
+# 支持DB2
+# import ibm_db_dbi
 import pymysql
 import psycopg2
 import cx_Oracle
 import pymssql
-import ibm_db
+# 支持DB2
+# import ibm_db
 # import iris
 from pymysql.constants import CLIENT
 from sqlalchemy import create_engine
@@ -98,7 +100,6 @@ class Database:
             return self.conn
         elif self.type_ == "db2":
 
-            # 部分存在密码为空的情况，无需输入密码
             if self.conn is None:
                 dsn = (
                     "DRIVER={{IBM DB2 ODBC DRIVER}};"

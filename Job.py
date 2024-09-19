@@ -11,6 +11,7 @@ import traceback
 from pymysql.converters import escape_string
 from flask import session
 from plugins import *
+from job_utils import *
 
 import pandas as pd
 import petl as etl
@@ -83,7 +84,7 @@ class Job:
 
     # 目标
     class To:
-        def __init__(self, conName, target, type_="", params=None, source_field=""):
+        def __init__(self, conName, target, type_="", params=None, source_field="", exception_patterns=None, retries=0, delay=0):
             if params is None:
                 params = []
             self.type_ = type_
@@ -92,6 +93,9 @@ class Job:
             self.target = target
             self.create = False
             self.source_field = source_field
+            self.exception_patterns = exception_patterns
+            self.retries = retries
+            self.delay = delay
 
         def set_conn(self, conn):
             self.connection = conn
@@ -223,15 +227,21 @@ class Job:
             # 获取动态参数
             for row in etl.dicts(paramsTable):
                 for transform in self.transforms:
-                    # print(transform.jobType)
+
                     if transform.jobType == 'transform':
                         sourceDb = transform.source.conName
                         sourceSql = transform.source.sql
                         table = etl.fromdb(databases[sourceDb].getConnection(), sourceSql.format(**row))
 
                         self.msgLog("开始同步数据: {}".format(sourceSql.format(**row)), steptime, level="DEBUG")
-                        targetTable = transform.target[0].target
-                        target_db = transform.target[0].conName
+                        if '.' in transform.target[0].target.format(**row):
+                            targetTable = transform.target[0].target.format(**row).split('.')[1]
+                            schema_name = transform.target[0].target.format(**row).split('.')[0]
+                            target_db = transform.target[0].conName
+                        else:
+                            targetTable = transform.target[0].target.format(**row)
+                            schema_name = None
+                            target_db = transform.target[0].conName
 
                         if databases[target_db].type_ in ["oracle", "db2"]:
                             connection2 = databases[target_db].getCursor()
@@ -245,22 +255,27 @@ class Job:
                         dcount = len(etl.head(table, 1))
                         if dcount >= 2:
                             logging.debug("执行Job任务：{}, {}".format(self.jobType, "数据存在，执行插入语句"))
-                            etl.appenddb(table=table, dbo=connection2, tablename=targetTable.format(**row))
+                            etl.appenddb(table=table, dbo=connection2, schema=schema_name, tablename=targetTable)
 
-                        steptime = self.msgLog("数据同步完成，目标表: {}".format(targetTable.format(**row)), steptime, level="DEBUG")
+                        row["_status"] = '1'
+                        row["_errmsg"] = '执行成功'
+                        steptime = self.msgLog("数据同步完成，目标表: {}".format(targetTable), steptime, level="DEBUG")
                     elif transform.jobType == "sql":
                         # 20220608 添加对null的转义
                         # print(row)
                         target_sql = transform.target[0].target
                         target_db = transform.target[0].conName
+                        # print(target_sql)
                         sql = target_sql.format(**row).replace("'None'", "null").replace("None", "null")
-                        # print(sql)
+                        # print("sql:{}".format(sql))
+                        # print("transform.target[0]:{}".format(transform.target[0]))
+                        # print("target_db:{}".format(target_db))
                         try:
                             if databases[target_db].type_ in ["oracle", "db2"]:
                                 row_count = databases[target_db].getCursor().execute(sql)
                             else:
                                 row_count = databases[target_db].getConnection().cursor().execute(sql)
-                            row["_status"] = '2'
+                            row["_status"] = '1'
                             row["_errmsg"] = '执行成功:更新条数为：{}'.format(str(row_count))
                         except (Exception) as e1:
                             ex1 = "timed out"
@@ -347,34 +362,32 @@ class Job:
                         # 20220608 添加对null的转义
                         # print(row)
                         sql = target.target.format(**row).replace("'None'", "null").replace("None", "null")
-                        # print(sql)
+                        # print("sql:{}".format(sql))
+
                         try:
-                            if databases[target.conName].type_ == "oracle":
-                                row_count = target.get_conn().cursor().execute(sql)
-                            else:
-                                row_count = target.get_conn().cursor().execute(sql)
-                            row["_status"] = '1'
-                            row["_errmsg"] = '执行成功:更新条数为：{}'.format(str(row_count))
-                        except (Exception) as e1:
-                            ex1 = "timed out"
-                            ex2 = "Deadlock"
-                            # ex3 = "Duplicate"
-                            if ex1 in str(e1) or ex2 in str(e1):
-                                try:
-                                    if databases[target.conName].type_ == "oracle":
-                                        row_count = target.get_conn().cursor().execute(sql)
-                                    else:
-                                        row_count = target.get_conn().cursor().execute(sql)
-                                    row["_status"] = '1'
-                                    row["_errmsg"] = '重试成功:更新条数为：{}'.format(str(row_count))
-                                    logging.warning("重试成功，执行的SQL：{}".format(sql))
-                                except Exception as e:
-                                    row["_status"] = '2'
-                                    row["_errmsg"] = escape_string(repr(e))
-                                    logging.error("SQL重试失败：{}，执行的SQL：{}".format(traceback.format_exc(), sql))
-                            else:
+                            # 执行SQL，返回成功标识，如果失败重试，同时返回重试次数
+                            exec_result, retry_count = exec_sql(
+                                sql=sql,
+                                row=row,
+                                target=target,
+                                databases=databases,
+                                retries=target.retries,
+                                delay=target.retries,
+                                backoff=1,
+                                patterns=target.exception_patterns
+                            )
+
+                            if exec_result is None:
                                 row["_status"] = '2'
-                                row["_errmsg"] = escape_string(repr(e1))
+                                row["_errmsg"] = "SQL执行失败, 重试次数: {}".format(retry_count)
+                            else:
+                                row["_status"] = '1'
+                                row["_errmsg"] = exec_result
+                                # logging.error("SQL执行成功，返回信息：{}，执行的SQL：{}".format(exec_result, sql))
+                            # print("_errmsg:{}".format(row["_errmsg"]))
+                        except Exception as e:
+                                row["_status"] = '2'
+                                row["_errmsg"] = escape_string(repr(e))
                                 logging.error("SQL执行失败：{}，执行的SQL：{}".format(traceback.format_exc(), sql))
 
                     elif target.type_ == "shell":
@@ -583,6 +596,8 @@ class Job:
                         #     steptime = self.msgLog("调用存储过程: {}，完成".format(target.target), steptime, level="DEBUG")
                         elif databases[target.conName].type_ in ("mysql", "sqlserver"):
                             # 有返回值
+                            if 'Create Table' in row:
+                                row['Create Table'] = row['Create Table'].replace("'", "''")
                             sql = target.target.format(**row).replace("'None'", "null").replace("None", "null")
                             try:
                                 # 20220608 添加对null的转义
@@ -591,6 +606,11 @@ class Job:
                                 df = pd.read_sql(sql, con=target.get_conn())
                                 var_cols = df.columns.values
                                 result = next(df.iterrows())[1]
+                                # if 'create_sql' in row:
+                                #     print("create_sql:".format(row['create_sql']))
+                                # if 'show_sql' in row:
+                                #     print("show_sql:".format(row['show_sql']))
+
                                 for col in var_cols:
                                     p_out[col] = result[col]
 
@@ -617,7 +637,7 @@ class Job:
                                 logging.error("SQL执行失败：{}，执行的SQL：{}".format(traceback.format_exc(), sql))
                             steptime = self.msgLog("调用存储过程: {}，完成".format(target.target), steptime, level="DEBUG")
 
-                    if i % 10 == 0 and target.conName is not None:
+                    if i % 1 == 0 and target.conName is not None:
                         target.get_conn().commit()
                 i = i + 1
 

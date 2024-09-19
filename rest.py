@@ -10,6 +10,8 @@ from gevent import monkey
 from gevent.pywsgi import WSGIServer
 import sys
 
+# from scripts.ce.pysynch import InvalidUsage
+
 monkey.patch_all()
 
 from crons.cron_task import *

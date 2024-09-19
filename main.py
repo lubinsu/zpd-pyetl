@@ -152,12 +152,14 @@ if __name__ == '__main__':
         exit(1)
     except pymysql.DatabaseError as e:
         logging.error("数据库异常: {}".format(e))
+        logging.error(traceback.format_exc())
         exit(1)
     except pymssql.DatabaseError as e:
         logging.error("数据库异常: {}".format(e))
         exit(1)
     except KeyError as e:
         logging.error("未匹配到字段: {}".format(e))
+        logging.error(traceback.format_exc())
         exit(1)
     except Exception as e:
         logging.error(traceback.format_exc())

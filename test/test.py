@@ -434,4 +434,6 @@ def get_result():
 
 
 if __name__ == "__main__":
-    get_result()
+    a = "a"
+    b = ["aa", "b"]
+    print(a in b)

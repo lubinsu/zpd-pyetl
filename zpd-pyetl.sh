@@ -42,3 +42,11 @@ python36 install.py
 
 # 注释掉pandas，__init__.py文件的第120行代码
 sed -i "120s/^/#/g" /usr/local/python3/lib/python3.6/site-packages/pandas/compat/__init__.py
+
+
+# 5.0.2 开始，升级脚本将在这里添加,方便低版本往高版本升级
+# tag:zpd-pyetl-5.0.2 -- 增加支持crontab定时任务
+cd $base_dir/python36
+pip36 install pytz-2022.4-py2.py3-none-any.whl
+pip36 install croniter-2.0.3-py2.py3-none-any.whl
+
