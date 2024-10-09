@@ -512,4 +512,12 @@ ALTER TABLE py_transforms ADD(
 	delay int NOT NULL DEFAULT '0' COMMENT '重试延迟时间，单位：秒'
 );
 
+
+-- tag:zpd-pyetl-5.0.8 失败是否继续执行默认值：修改为Y
+alter table py_jobs modify is_fail_continue varchar(2) default 'Y' comment '失败是否继续执行，默认为N，不执行';
+
+
+-- 增加查询导出csv文本功能
+INSERT INTO `python`.`py_trans_type` (`id`, `trans_type_name`, `trans_type_comment`) VALUES ('12', 'export', '导出数据');
+
 SET FOREIGN_KEY_CHECKS = 1;

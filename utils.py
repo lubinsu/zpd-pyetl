@@ -232,6 +232,12 @@ def get_jobs_by_db(db, job_chain):
                     source_field = to_item["from_sql"]
                     tos.append(Job.To(conName, target, type_, source_field=source_field))
 
+                elif type_ == "export":
+
+                    # 来源变量
+                    source_field = to_item["from_sql"]
+                    tos.append(Job.To(conName, target, type_, source_field=source_field))
+                    
                 elif type_ == "javascript":
                     sql = "SELECT" \
                           "       tr.id," \

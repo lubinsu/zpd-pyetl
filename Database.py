@@ -98,21 +98,21 @@ class Database:
                 self.conn = pymssql.connect(host=self.host, user=self.user, port=int(self.port), password=self.password,
                                             database=self.db)
             return self.conn
-        elif self.type_ == "db2":
-
-            if self.conn is None:
-                dsn = (
-                    "DRIVER={{IBM DB2 ODBC DRIVER}};"
-                    "DATABASE={0};"
-                    "HOSTNAME={1};"
-                    "AUTHENTICATION=SERVER;"
-                    "PORT={2};"
-                    "PROTOCOL=TCPIP;"
-                    "UID={3};"
-                    "PWD={4};").format(self.db, self.host, int(self.port), self.user, self.password)
-
-                ibm_db_conn = ibm_db.connect(dsn, "", "")
-                self.conn = ibm_db_dbi.Connection(ibm_db_conn)
+        # elif self.type_ == "db2":
+        #
+        #     if self.conn is None:
+        #         dsn = (
+        #             "DRIVER={{IBM DB2 ODBC DRIVER}};"
+        #             "DATABASE={0};"
+        #             "HOSTNAME={1};"
+        #             "AUTHENTICATION=SERVER;"
+        #             "PORT={2};"
+        #             "PROTOCOL=TCPIP;"
+        #             "UID={3};"
+        #             "PWD={4};").format(self.db, self.host, int(self.port), self.user, self.password)
+        #
+        #         ibm_db_conn = ibm_db.connect(dsn, "", "")
+        #         self.conn = ibm_db_dbi.Connection(ibm_db_conn)
 
             return self.conn
         elif self.type_ == "postgre":

@@ -22,6 +22,7 @@ from suds.xsd.doctor import ImportDoctor, Import
 from Database import *
 from zpd_parser.json_parser import *
 from zpd_parser.xml_parser import get_xml_val
+import csv
 
 cx_type = {'VARCHAR2': cx_Oracle.STRING,
            'NUMBER': cx_Oracle.NUMBER,
@@ -538,7 +539,38 @@ class Job:
                         # df = pd.DataFrame(json.loads(res.text)["result"]["siteList"])
                         df.to_sql(name=target.target.format(**row), con=databases[target.conName].getEngine(),
                                   index=False, if_exists='append')
+                    elif target.type_ == "export":
+                        output_file = f"{row['file_name']}.csv" 
+                        control_file= f"{row['file_name']}.ctl" 
+                        exe_sql = row['exe_sql']
+                        start_time = datetime.datetime.now()
+                        self.msgLog("开始导出表数据: {}".format(output_file), steptime, level="DEBUG")
+                        connection = sourceConnection
+                        with connection.cursor(pymysql.cursors.SSCursor) as cursor, open(output_file, 'w', newline='', encoding='utf-8') as file:
+                            writer = csv.writer(file, delimiter=row['delimiter'])
+                            cursor.execute(exe_sql)
+                            columns = [desc[0] for desc in cursor.description]
+                            # writer.writerow(columns) 
+                            row_count = 0
+                            buffer = []
+                            batch_size = 100000
+                            for col in cursor:
+                                buffer.append(col)
+                                row_count += 1
+                                if len(buffer) >= batch_size:
+                                    writer.writerows(buffer)
+                                    buffer = []
+                            if buffer:
+                                writer.writerows(buffer)
 
+                            elapsed_time = datetime.datetime.now() - start_time
+                        with open(control_file, 'w', encoding='utf-8') as ctl_file:
+                            ctl_file.write(f"导出文件: {output_file}\n")
+                            ctl_file.write(f"导出时间: {datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}\n")
+                            ctl_file.write(f"导出查询: {exe_sql}\n")
+                            ctl_file.write(f"导出列: {', '.join(columns)}\n")
+                            ctl_file.write(f"总行数: {row_count}\n")
+                            ctl_file.write(f"总耗时：{elapsed_time.total_seconds()} 秒")
                     elif target.type_ == "procedure":
                         # 给参数赋值，新建出参
                         if databases[target.conName].type_ == "oracle":

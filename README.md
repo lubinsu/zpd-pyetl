@@ -1,6 +1,6 @@
 
 ```
-支持数据库：MySQL、Oracle、PostgreSQL、SQLServer、iris
+支持数据库：MySQL、Oracle、PostgreSQL、SQLServer、iris、db2
 
 初始化数据库脚本(MySQL版本)：scripts/repository.sql
 
