@@ -6,3 +6,10 @@ class MyClass:
 
 def my_function():
     print("Hello from function!")
+
+
+def print_function(row):
+    row['dddd'] = row['webservice_response']
+    print(row['webservice_response'])
+    return row
+

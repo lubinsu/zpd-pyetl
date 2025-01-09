@@ -36,9 +36,12 @@ class PyEtlRunLog(Base):
 class LoggerHandlerToMysql(logging.Handler):
     def __init__(self, configdb_str, formatter, job_chain, pid):
         self.configdb_str = configdb_str
-        self.config_engine = create_engine(self.configdb_str)
-        self.ConfigSession = sessionmaker(bind=self.config_engine)
-        self.config_session = self.ConfigSession()
+        # self.config_engine = create_engine(self.configdb_str)
+        # self.ConfigSession = sessionmaker(bind=self.config_engine)
+        # self.config_session = self.ConfigSession()
+        self.config_engine = None
+        self.ConfigSession = None
+        self.config_session = None
 
         self.formatter = formatter
         self.job_chain = job_chain
@@ -86,6 +89,7 @@ class LoggerHandlerToMysql(logging.Handler):
     def emit(self, record):
         self.lock.acquire()
 
+        # 一般是全局的，初始化一次即可
         self.config_engine = create_engine(self.configdb_str)
         self.ConfigSession = sessionmaker(bind=self.config_engine)
         self.config_session = self.ConfigSession()
@@ -115,6 +119,8 @@ class LoggerHandlerToMysql(logging.Handler):
         pass
 
     def close(self):
-        self.config_session.commit()
-        self.config_session.close()
+        if self.config_session is not None:
+            self.config_session.commit()
+            self.config_session.close()
+            self.config_engine.dispose()
         pass

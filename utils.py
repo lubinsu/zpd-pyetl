@@ -63,7 +63,7 @@ def get_conn(name, item):
 '''
 def check_status(db):
 
-    cur = db.getConnection().cursor()
+    cur: object = db.getConnection().cursor()
     cur.execute("SELECT f_check_rest_status()")
 
     results = cur.fetchall()

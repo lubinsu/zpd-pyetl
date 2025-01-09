@@ -55,6 +55,25 @@ class BlobSeq:
         self.is_blob = is_blob
 
 
+def replace_placeholders(query, replacements):
+    """
+    替换 SQL 字符串中的占位符
+    :param query: 包含占位符的 SQL 字符串
+    :param replacements: 包含替换值的字典
+    :return: 替换后的字符串
+    """
+    # 匹配 {key} 样式的占位符
+    pattern = r'\{(\w+)\s*\}'  # 匹配花括号中的键名，并忽略多余空格
+
+    def replacer(match):
+        key = match.group(1).strip()  # 提取占位符中的键名
+        if key in replacements:
+            return str(replacements[key])  # 返回替换后的值
+        return match.group(0)  # 如果未找到替换值，保持原样
+
+    # 使用正则替换占位符
+    return re.sub(pattern, replacer, query)
+
 def run_case(url, method, params, doctor):
     values = tuple(params.values())  # 存储传进来的json的value
     client = Client(url, doctor=doctor)
@@ -134,7 +153,13 @@ class Job:
 
         # logging.debug("执行Job任务：{}".format(self.name))
         if self.jobType == "syn":
-            sourceSQL = self.source.sql
+            # sourceSQL = self.source.sql
+            try:
+                # sourceSQL = self.source.sql.format(**session)
+                sourceSQL = replace_placeholders(self.source.sql, session["third_party_params"])
+            except:
+                sourceSQL = self.source.sql
+
             sourceDb = self.source.conName
 
             targetTable = self.target[0].target
@@ -156,7 +181,8 @@ class Job:
 
             if databases[target_db].type_ == "mysql":
                 logging.debug("执行Job任务：{}, {}".format(self.jobType, "mysql连接需要设置SQL_MODE"))
-                connection2.cursor().execute('SET SQL_MODE=ANSI_QUOTES')
+                with connection2.cursor() as cursor:
+                    cursor.execute('SET SQL_MODE=ANSI_QUOTES')
 
             if databases[target_db].type_ == "oracle" and len(etl.head(table, 1)) >= 2:
                 logging.debug("执行Job任务：{}, {}".format(self.jobType, "目标数据库：oracle，数据存在，执行插入语句"))
@@ -198,6 +224,7 @@ class Job:
                     while i < len(self.target[0].params):
                         fields_arr.append(self.target[0].params[i].field_name)
                         if self.target[0].params[i].is_blob == 1:
+
                             if row[i] == None:
                                 image=None
                             else:
@@ -306,19 +333,27 @@ class Job:
 
         elif self.jobType == "procedure":
             targetProc = self.target[0].target
+            try:
+                # sourceSQL = self.source.sql.format(**session)
+                targetProc = replace_placeholders(self.target[0].target, session["third_party_params"])
+
+            except:
+
+                targetProc = self.target[0].target
+
             target_db = self.target[0].conName
 
             self.msgLog("开始调用存储过程: {}.{}".format(target_db, targetProc), steptime)
             if databases[target_db].type_ == "oracle":
                 # 获取参数清单
-                databases[target_db].getConnection().cursor().execute(
-                    "ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+                with databases[target_db].getConnection().cursor() as cursor:
+                    cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
                 databases[target_db].getConnection().cursor().execute(targetProc)
                 # databases[target_db].getConnection().cursor().callproc(targetProc)  # ['Nick', 'Nick, Good Morning!']
                 # steptime = self.msgLog("调用存储过程: {}，完成".format(targetProc), steptime, level="DEBUG")
             else:
                 connection = databases[target_db].getConnection()
-                cursor = connection.cursor(pymysql.cursors.DictCursor)
+                # cursor = connection.cursor(pymysql.cursors.DictCursor)
 
                 with connection.cursor() as cursor:
                     try:
@@ -341,7 +376,13 @@ class Job:
                 logging.error("调用shell失败：{}".format(v_rst))
 
         elif self.jobType == "stream":
-            sourceSQL = self.source.sql
+            # sourceSQL = self.source.sql
+            try:
+                # sourceSQL = self.source.sql.format(**session)
+                sourceSQL = replace_placeholders(self.source.sql, session["third_party_params"])
+            except:
+                sourceSQL = self.source.sql
+
             sourceDb = self.source.conName
             sourceConnection = databases[sourceDb].getConnection()
             table = etl.fromdb(sourceConnection, sourceSQL)
@@ -414,7 +455,7 @@ class Job:
                     # 配置字段：py_transform.from_sql，以及 py_transform.to_target
                     elif target.type_ == "dy_function":
                         func_name = row[target.target.format(**row)]
-                        rst = eval("{0}".format(func_name))(row)
+                        rst = eval("{0}".format(func_name))(row, databases)
                         row = row if rst is None else rst
 
                     elif target.type_ == "http":
@@ -429,16 +470,17 @@ class Job:
 
                         if len(headers) == 0 and 'headers' in row:
                             headers = json.loads(row['headers'])
-                        if 'application/x-www-form-urlencoded' in headers["Content-Type"]:
-                            data =json.loads(row['body'])
-                        else:
-                            data =row['body'].encode(row['encode'])
+
+                        if "encode" not in row:
+                            row['encode'] = "utf-8"
 
                         if 'body' not in row:
                             row['body'] = '{}'
 
-                        if "encode" not in row:
-                            row['encode'] = "utf-8"
+                        if 'application/x-www-form-urlencoded' in headers["Content-Type"]:
+                            data =json.loads(row['body'])
+                        else:
+                            data =row['body'].encode(row['encode'])
 
                         if 'req_method' in row and str(row['req_method']).upper() == "GET":
                             r = requests.get(url=url)
@@ -540,8 +582,8 @@ class Job:
                         df.to_sql(name=target.target.format(**row), con=databases[target.conName].getEngine(),
                                   index=False, if_exists='append')
                     elif target.type_ == "export":
-                        output_file = f"{row['file_name']}.csv" 
-                        control_file= f"{row['file_name']}.ctl" 
+                        output_file = f"{row['file_name']}.csv"
+                        control_file = f"{row['file_name']}.ctl"
                         exe_sql = row['exe_sql']
                         start_time = datetime.datetime.now()
                         self.msgLog("开始导出表数据: {}".format(output_file), steptime, level="DEBUG")

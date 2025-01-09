@@ -5,11 +5,12 @@
 
 import subprocess
 from datetime import *
-import fcntl
 
 import croniter
 import requests
+from pymysql import InterfaceError
 
+from distribution.mysql_distributed_lock import mysql_distributed_lock
 from utils import *
 
 
@@ -21,7 +22,7 @@ def CronRunCurrentTime(now, sched):
 def exec_jobs(cron):
     if cron.cron_type == "shell":
         # os.system(cron.jobs_name)
-        subprocess.run(cron.jobs_name, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(cron.jobs_name, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     elif cron.cron_type == "pyjobs":
         url = 'http://127.0.0.1:8383/runjob/{}'.format(cron.jobs_name)
         requests.get(url)
@@ -30,22 +31,34 @@ def exec_jobs(cron):
 
 def task(cron):
     logging.info("crontab任务开始：{}".format(cron.jobs_name))
+    db = None
     try:
         if cron.is_concurrency == "N":
-            try:
-                with open("/tmp/py_crontab_{}.lock".format(cron.id), "w") as f:
-                    # 获取文件锁
-                    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    # print("文件锁获取成功")
+            # try:
+            db = Database(**cron.db_config)
+            conn = db.getConnection()
+            lock = mysql_distributed_lock(conn, cron.jobs_name, timeout=2)
+            if lock.acquire():
+                try:
                     exec_jobs(cron)
-                    # print("文件锁释放成功")
-                    # 释放文件锁
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-            except BlockingIOError as e:
+                finally:
+                    lock.release()
+            else:
                 logging.info("任务重复执行，已退出, {}".format(cron.jobs_name))
-                # print("文件已被锁定")
+
         else:
             exec_jobs(cron)
 
     except Exception:
         logging.error("{}执行异常, {}".format(cron.jobs_name, traceback.format_exc()))
+    finally:
+        # if lock is not None:
+        #     try:
+        #         lock.release()
+        #     # 报错则重新连接释放
+        #     except InterfaceError:
+        #         conn = db.getConnection()
+        #         lock = mysql_distributed_lock(conn, cron.jobs_name, timeout=2)
+        #         lock.release()
+        if db is not None:
+            db.close()

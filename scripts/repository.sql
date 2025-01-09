@@ -518,6 +518,7 @@ alter table py_jobs modify is_fail_continue varchar(2) default 'Y' comment '失�
 
 
 -- 增加查询导出csv文本功能
-INSERT INTO `python`.`py_trans_type` (`id`, `trans_type_name`, `trans_type_comment`) VALUES ('12', 'export', '导出数据');
+INSERT INTO `py_trans_type` (`id`, `trans_type_name`, `trans_type_comment`) VALUES ('13', 'export', '导出数据');
+
 
 SET FOREIGN_KEY_CHECKS = 1;
